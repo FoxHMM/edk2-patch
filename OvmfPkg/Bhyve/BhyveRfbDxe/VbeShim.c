@@ -203,11 +203,11 @@ InstallVbeShim (
   VbeInfo     = &VbeInfoFull->Base;
   Ptr         = VbeInfoFull->Buffer;
 
-  CopyMem (VbeInfo->Signature, "VESA", 4);
+  CopyMem (VbeInfo->Signature, "VUSA", 4);
   VbeInfo->VesaVersion = 0x0200;
 
   VbeInfo->OemNameAddress = (UINT32)SegmentC << 12 | (UINT16)((UINTN)Ptr-SegmentC);
-  CopyMem (Ptr, "FBSD", 5);
+  CopyMem (Ptr, "UEFI", 5);
   Ptr += 5;
 
   VbeInfo->Capabilities = BIT1 | BIT0; // DAC can be switched into 8-bit mode

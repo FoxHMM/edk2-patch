@@ -7,7 +7,7 @@
 
 #include "Platform.h"
 
-#define EFI_ACPI_OEM_TABLE_ID                      SIGNATURE_64('B','V','M','C','F','G',' ',' ')
+#define EFI_ACPI_OEM_TABLE_ID                      SIGNATURE_64('U',' ','R','v','p',' ',' ',' ')
 
 #pragma pack(1)
 

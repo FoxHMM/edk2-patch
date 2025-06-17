@@ -520,7 +520,7 @@
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdConInConnectOnDemand|FALSE
 
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"BHYVE"
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVendor|L"INTEL "
   gUefiOvmfPkgTokenSpaceGuid.PcdDebugIoPort|0x2F8
 
 ################################################################################
