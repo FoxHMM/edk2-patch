@@ -1,43 +1,47 @@
+# 工作流名称
 name: EDK2 Build
 
+# 触发条件，这里示例为当推送到main分支时触发
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches:
+      - main
 
+# 权限设置
+permissions:
+  contents: read
+  id - token: write
+
+# 作业定义
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    
+  build - and - upload:
+    # 运行在最新的Ubuntu系统上
+    runs - on: ubuntu - latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0  # 获取完整历史，确保能应用补丁
-      
-      - name: Install dependencies
+      # 检出代码仓库
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 这里可以添加构建EDK2项目的步骤，例如安装依赖、执行构建脚本等
+      - name: Install Dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential uuid-dev iasl nasm python3-distutils
-      
-      - name: Initialize EDK2 environment
+          # 安装必要的软件包
+          sudo apt - get update
+          sudo apt - get install - y some - required - package
+
+      - name: Build EDK2
         run: |
+          # 进入项目目录并执行构建命令
           cd edk2
-          source edksetup.sh BaseTools
-          make -C BaseTools
-      
-      - name: Build OVMF
-        run: |
-          cd edk2
-          build -a X64 -p OvmfPkg/OvmfPkgX64.dsc -b RELEASE -t GCC5
-      
+          ./build - script.sh
+
+      # 上传构建产物
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload - artifact@v4
         with:
-          name: OVMF-Firmware
+          name: OVMF - Firmware
           path: |
             edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_CODE.fd
             edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_VARS.fd
-          retention-days: 7
+          retention - days: 7
