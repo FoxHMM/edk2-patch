@@ -1,0 +1,43 @@
+name: EDK2 Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0  # 获取完整历史，确保能应用补丁
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential uuid-dev iasl nasm python3-distutils
+      
+      - name: Initialize EDK2 environment
+        run: |
+          cd edk2
+          source edksetup.sh BaseTools
+          make -C BaseTools
+      
+      - name: Build OVMF
+        run: |
+          cd edk2
+          build -a X64 -p OvmfPkg/OvmfPkgX64.dsc -b RELEASE -t GCC5
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: OVMF-Firmware
+          path: |
+            edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_CODE.fd
+            edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_VARS.fd
+          retention-days: 7
