@@ -1,0 +1,93 @@
+name: EDK2 Build & Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+  artifacts: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential uuid-dev iasl nasm python3-distutils \
+            python3-pip git curl wget
+          pip3 install pycryptodome pyopenssl pyyaml colorama psutil six
+
+      - name: Cache EDK2 dependencies
+        uses: actions/cache@v4
+        id: edk2-cache
+        with:
+          path: edk2/BaseTools
+          key: ${{ runner.os }}-edk2-base-tools-${{ hashFiles('edk2/BaseTools/Source/C/**/*') }}
+
+      - name: Build BaseTools (if not cached)
+        if: steps.edk2-cache.outputs.cache-hit != 'true'
+        run: |
+          cd edk2
+          source edksetup.sh BaseTools
+          make -C BaseTools
+
+      - name: Initialize EDK2 environment
+        run: |
+          cd edk2
+          source edksetup.sh
+          export BUILD_TARGET=RELEASE
+          export TARGET_ARCH=X64
+          export TOOL_CHAIN_TAG=GCC5
+          echo "EDK2 environment initialized: TARGET_ARCH=${TARGET_ARCH}, BUILD_TARGET=${BUILD_TARGET}"
+
+      - name: Build OVMF firmware
+        run: |
+          cd edk2
+          build -p OvmfPkg/OvmfPkgX64.dsc || { echo "Build failed, checking logs..."; cat Build/OvmfX64/RELEASE_GCC5/build.log; exit 1; }
+
+      - name: Verify build artifacts
+        run: |
+          if [ ! -f "edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_CODE.fd" ]; then
+            echo "Error: OVMF_CODE.fd not found!"
+            exit 1
+          fi
+          if [ ! -f "edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_VARS.fd" ]; then
+            echo "Error: OVMF_VARS.fd not found!"
+            exit 1
+          fi
+          file edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_CODE.fd
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovmf-firmware
+          path: |
+            edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_CODE.fd
+            edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_VARS.fd
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Show build info
+        run: |
+          cd edk2/Build/OvmfX64/RELEASE_GCC5/FV
+          echo "Firmware build date: $(date -r OVMF_CODE.fd)"
+          strings OVMF_CODE.fd | grep -i "intel" || true
