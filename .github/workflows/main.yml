@@ -1,0 +1,69 @@
+name: EDK2 Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            uuid-dev \
+            iasl \
+            nasm \
+            python3-distutils \
+            python3-pip
+          pip3 install pycryptodome
+
+      - name: Initialize EDK2 Environment
+        run: |
+          cd edk2
+          source edksetup.sh BaseTools
+          make -C BaseTools
+
+      - name: Build OVMF Firmware
+        run: |
+          cd edk2
+          build -a X64 -p OvmfPkg/OvmfPkgX64.dsc -b RELEASE -t GCC5
+
+      - name: Verify Build Artifacts
+        run: |
+          if [ ! -f "edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_CODE.fd" ]; then
+            echo "ERROR: OVMF_CODE.fd not found!"
+            exit 1
+          fi
+          if [ ! -f "edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_VARS.fd" ]; then
+            echo "ERROR: OVMF_VARS.fd not found!"
+            exit 1
+          fi
+          echo "Firmware files found successfully!"
+
+      - name: Upload Firmware Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OVMF-Firmware
+          path: |
+            edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_CODE.fd
+            edk2/Build/OvmfX64/RELEASE_GCC5/FV/OVMF_VARS.fd
+          retention-days: 7
+          if-no-files-found: error
